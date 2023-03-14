@@ -17,6 +17,7 @@ var upgrader = websocket.Upgrader{
 func Handler() {
 
 	http.HandleFunc("/todo", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "<h1>Hello from Go!</h1>")
 		// Upgrade upgrades the HTTP server connection to the WebSocket protocol.
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -47,5 +48,5 @@ func Handler() {
 	// 	http.ServeFile(w, r, "websockets.html")
 	// })
 
-	http.ListenAndServe(":8080", nil)
+	//http.ListenAndServe(":8080", nil)
 }
