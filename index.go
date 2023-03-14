@@ -47,5 +47,5 @@ func Handler() {
 		fmt.Fprintf(w, "<h1>Hello from Go!</h1>")
 	})
 
-	//http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", nil)
 }
