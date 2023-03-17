@@ -11,7 +11,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -35,15 +34,8 @@ func main() {
 		AllowOrigins: "*",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
-	app.Post("/", func(c *fiber.Ctx) error {
-		Client := pusher.Client{
-			AppID:   "1568045",
-			Key:     "51f659ce3f43900892ff",
-			Secret:  "2693c09337092248c022",
-			Cluster: "eu",
-			Secure:  true,
-		}
-		var waitGroup sync.WaitGroup
+
+	app.Post("/data", func(c *fiber.Ctx) error {
 		var reqBody requestBody
 		err := json.Unmarshal(c.Body(), &reqBody)
 		if err != nil {
@@ -52,8 +44,29 @@ func main() {
 		}
 		var codeFile string = reqBody.Data
 		var langCode string = reqBody.Lang
+		response := Response{
+			Message: "data Recieved Successfully:" + codeFile + langCode,
+		}
+		return c.JSON(response)
+	})
+	app.Post("/", func(c *fiber.Ctx) error {
+		Client := pusher.Client{
+			AppID:   "1568045",
+			Key:     "51f659ce3f43900892ff",
+			Secret:  "2693c09337092248c022",
+			Cluster: "eu",
+			Secure:  true,
+		}
+		var reqBody requestBody
+		err := json.Unmarshal(c.Body(), &reqBody)
+		if err != nil {
+			// handle error
+			fmt.Println(err)
+		}
+		var codeFile string = reqBody.Data
+		var langCode string = reqBody.Lang
+		resultChan := make(chan struct{})
 		for line_num, line := range strings.Split(codeFile, "\n") {
-			waitGroup.Add(1)
 			// if this line has fewer characters then skip it
 			if len(line) < 3 {
 				sendEventData(Client, line, line_num)
@@ -61,21 +74,22 @@ func main() {
 			}
 			// using concurrency to process each line for better performance
 			go func(line string, num int) {
-				defer waitGroup.Done()
 				line, err := postRequest(line, langCode)
 				if err != nil {
 					fmt.Println(err)
 				}
-				fmt.Println(num+1, line)
+				//fmt.Println(num+1, line)
 				sendEventData(Client, line, num)
+				resultChan <- struct{}{}
 			}(line, line_num)
 		}
-		waitGroup.Wait()
+		for i := 0; i < len(strings.Split(codeFile, "\n"))-1; i++ {
+			<-resultChan
+		}
 		response := Response{
 			Message: "data Recieved Successfully",
 		}
 		return c.JSON(response)
-
 	})
 
 	var port string = os.Getenv("PORT")
